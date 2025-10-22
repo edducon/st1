@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.example.conferenceapp.controller.DetailsController">
+
+    <top>
+        <HBox spacing="15" styleClass="pane-secondary" alignment="CENTER_LEFT">
+            <ImageView fx:id="logo" fitWidth="64" fitHeight="64"
+                       pickOnBounds="true" preserveRatio="true"/>
+            <Label fx:id="title" style="-fx-font-size: 22px; -fx-font-weight: bold;"/>
+        </HBox>
+    </top>
+
+    <center>
+        <GridPane hgap="10" vgap="10" style="-fx-padding: 20;">
+
+            <Label text="Дата:"         GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+            <Label fx:id="date"         GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+            <Label text="Город:"        GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+            <Label fx:id="city"         GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+            <Label text="Организатор:"  GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+            <Label fx:id="organizer"    GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+            <Label text="Описание:"     GridPane.rowIndex="3" GridPane.columnIndex="0"
+                   GridPane.valignment="TOP"/>
+            <TextArea fx:id="description" editable="false" wrapText="true"
+                      prefRowCount="6"
+                      GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+        </GridPane>
+    </center>
+</BorderPane>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.control.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.example.conferenceapp.controller.OrganizerController">
+
+    <!-- ─────────── TOP: заголовок ─────────── -->
+    <top>
+        <Label text="Окно Организатора"
+               style="-fx-font-size: 20px; -fx-font-weight: bold;"
+               BorderPane.alignment="CENTER"/>
+    </top>
+
+    <!-- ─────────── CENTER: рабочая панель ─────────── -->
+    <center>
+        <HBox spacing="30" alignment="CENTER" style="-fx-padding: 25;">
+            <!-- фото + кнопка «Мой профиль» -->
+            <VBox spacing="15" alignment="TOP_CENTER">
+                <ImageView fx:id="photo" fitWidth="140" fitHeight="140"
+                           preserveRatio="true"
+                           style="-fx-border-color: lightgray; -fx-border-width: 1;"/>
+                <Button fx:id="btnProfile" text="Мой профиль" maxWidth="140"/>
+            </VBox>
+
+            <!-- приветствие + кнопки -->
+            <VBox spacing="15" alignment="TOP_CENTER">
+                <Label fx:id="greeting"
+                       style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+                <Button fx:id="btnEvents" text="Мероприятия"   maxWidth="160"/>
+                <Button fx:id="btnParticipants" text="Участники" maxWidth="160"/>
+                <Button fx:id="btnJury" text="Жюри"           maxWidth="160"/>
+            </VBox>
+        </HBox>
+    </center>
+</BorderPane>

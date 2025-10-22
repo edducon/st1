@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.example.conferenceapp.controller.MainController">
+
+    <!-- ─────────── TOP: логотип + кнопка авторизации ─────────── -->
+    <top>
+        <HBox spacing="20" styleClass="pane-secondary" alignment="CENTER_LEFT">
+            <ImageView fx:id="logoBig" fitWidth="64" fitHeight="64"
+                       pickOnBounds="true" preserveRatio="true"/>
+            <Label text="Конференции по информационной безопасности"
+                   style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
+            <Pane HBox.hgrow="ALWAYS"/>
+            <Button fx:id="loginBtn" text="Авторизация" styleClass="button-primary"/>
+        </HBox>
+    </top>
+
+    <!-- ─────────── CENTER: фильтры + таблица мероприятий ─────────── -->
+    <center>
+        <VBox spacing="10" style="-fx-padding: 15;">
+            <!-- фильтры -->
+            <HBox spacing="10">
+                <Label text="Направление:"/>
+                <ComboBox fx:id="directionFilter" promptText="Все направления"/>
+                <Label text="Дата:"/>
+                <DatePicker fx:id="dateFilter"/>
+                <Button text="Сбросить" onAction="#onClearFilters"/>
+            </HBox>
+
+            <!-- таблица -->
+            <TableView fx:id="eventTable" VBox.vgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="logoCol" text="" prefWidth="80"/>
+                    <TableColumn fx:id="titleCol" text="Название" prefWidth="350"/>
+                    <TableColumn fx:id="directionCol" text="Направление" prefWidth="180"/>
+                    <TableColumn fx:id="dateCol" text="Дата" prefWidth="120"/>
+                </columns>
+            </TableView>
+        </VBox>
+    </center>
+</BorderPane>
