@@ -10,6 +10,7 @@ import javafx.scene.control.*;
 import javafx.scene.image.ImageView;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import java.util.prefs.Preferences;
 
 import java.io.IOException;
 
@@ -19,10 +20,15 @@ public class LoginController {
     @FXML private PasswordField  passwordField;
     @FXML private ImageView      captchaImage;
     @FXML private TextField      captchaInput;
-    @FXML private CheckBox       rememberCheck;       // пока без логики
+    @FXML private CheckBox       rememberCheck;
     @FXML private Label          errorLabel;
     @FXML private Label          lockLabel;
     @FXML private Button         loginBtn;
+
+    private static final Preferences PREFS = Preferences.userNodeForPackage(LoginController.class);
+    private static final String PREF_REMEMBER = "remember.enabled";
+    private static final String PREF_ID       = "remember.id";
+    private static final String PREF_PWD      = "remember.pwd";
 
     private final UserDao userDao = new UserDao();
     private String captchaCode = "";
@@ -30,7 +36,17 @@ public class LoginController {
     private boolean locked     = false;
 
     /* ----------------- init ----------------- */
-    public void initialize() { refreshCaptcha(); }
+    public void initialize() {
+        refreshCaptcha();
+        loadRememberedCredentials();
+        rememberCheck.selectedProperty().addListener((obs, wasSelected, isSelected) -> {
+            if (!isSelected) {
+                PREFS.putBoolean(PREF_REMEMBER, false);
+                PREFS.remove(PREF_ID);
+                PREFS.remove(PREF_PWD);
+            }
+        });
+    }
 
     @FXML private void onRefreshCaptcha(){ refreshCaptcha(); }
 
@@ -44,6 +60,8 @@ public class LoginController {
     /* ----------------- login ----------------- */
     @FXML private void onLogin(){
         if(locked) return;
+
+        errorLabel.setText("");
 
         /* captcha */
         if(!captchaInput.getText().equalsIgnoreCase(captchaCode)){
@@ -63,6 +81,7 @@ public class LoginController {
         }
 
         /* ---- успех ---- */
+        handleRememberChoice(idNum, pwd);
         openRoleWindow(u);
 
         /* скрываем главное окно и закрываем окно авторизации */
@@ -96,6 +115,27 @@ public class LoginController {
     }
 
     private void showError(String msg){ errorLabel.setText(msg); }
+
+    private void handleRememberChoice(String idNum, String pwd) {
+        if (rememberCheck.isSelected()) {
+            PREFS.putBoolean(PREF_REMEMBER, true);
+            PREFS.put(PREF_ID, idNum);
+            PREFS.put(PREF_PWD, pwd);
+        } else {
+            PREFS.putBoolean(PREF_REMEMBER, false);
+            PREFS.remove(PREF_ID);
+            PREFS.remove(PREF_PWD);
+        }
+    }
+
+    private void loadRememberedCredentials() {
+        boolean remember = PREFS.getBoolean(PREF_REMEMBER, false);
+        rememberCheck.setSelected(remember);
+        if (remember) {
+            idField.setText(PREFS.get(PREF_ID, ""));
+            passwordField.setText(PREFS.get(PREF_PWD, ""));
+        }
+    }
 
     private void openRoleWindow(User u){
         String fxml = switch (u.getRole()){
