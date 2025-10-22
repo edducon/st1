@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<DialogPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.example.conferenceapp.controller.JuryDirectoryController">
+    <content>
+        <VBox spacing="12" padding="15">
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <TextField fx:id="searchField" promptText="Поиск по фамилии" />
+                <ComboBox fx:id="roleBox" prefWidth="160" />
+                <ComboBox fx:id="eventBox" promptText="Все мероприятия" prefWidth="220" />
+                <Pane HBox.hgrow="ALWAYS" />
+                <Button fx:id="registerBtn" text="Регистрация" />
+            </HBox>
+
+            <TableView fx:id="table" prefHeight="360">
+                <columns>
+                    <TableColumn fx:id="photoCol" text="Фото" prefWidth="80" />
+                    <TableColumn fx:id="nameCol" text="ФИО" prefWidth="220" />
+                    <TableColumn fx:id="emailCol" text="Email" prefWidth="220" />
+                    <TableColumn fx:id="roleCol" text="Роль" prefWidth="160" />
+                </columns>
+            </TableView>
+
+            <Label fx:id="countLabel" text="Всего: 0" />
+        </VBox>
+    </content>
+</DialogPane>

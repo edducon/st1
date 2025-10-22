@@ -1,9 +1,48 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
 
-<AnchorPane prefWidth="1024.0" prefHeight="768.0"
+<BorderPane prefWidth="1024.0" prefHeight="720.0"
             xmlns="http://javafx.com/javafx/20" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.example.conferenceapp.controller.ModeratorController">
-    <!-- TODO: Design UI here -->
-</AnchorPane>
+
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="15" padding="20" style="-fx-background-color: #E6FFFF;">
+            <Label text="Окно модератора" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
+            <Label fx:id="greetingLabel" style="-fx-font-size: 16px;"/>
+            <Pane HBox.hgrow="ALWAYS"/>
+            <Button fx:id="myActivitiesBtn" text="Мои активности"/>
+        </HBox>
+    </top>
+
+    <center>
+        <VBox spacing="15" padding="20">
+            <HBox spacing="10">
+                <Label text="Направление:"/>
+                <ComboBox fx:id="directionBox" promptText="Все направления" prefWidth="200"/>
+                <Label text="Мероприятие:"/>
+                <ComboBox fx:id="eventBox" promptText="Все мероприятия" prefWidth="220"/>
+                <Pane HBox.hgrow="ALWAYS"/>
+            </HBox>
+
+            <TableView fx:id="activityTable" VBox.vgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="activityCol" text="Активность" prefWidth="260"/>
+                    <TableColumn fx:id="eventCol" text="Мероприятие" prefWidth="220"/>
+                    <TableColumn fx:id="dateCol" text="Дата" prefWidth="110"/>
+                    <TableColumn fx:id="timeCol" text="Время" prefWidth="120"/>
+                    <TableColumn fx:id="statusCol" text="Статус" prefWidth="180"/>
+                </columns>
+            </TableView>
+        </VBox>
+    </center>
+
+    <bottom>
+        <HBox alignment="CENTER_RIGHT" spacing="10" padding="20">
+            <Label fx:id="infoLabel" textFill="#006400" HBox.hgrow="ALWAYS"/>
+            <Button fx:id="applyBtn" text="Подать заявку" styleClass="button-primary"/>
+        </HBox>
+    </bottom>
+</BorderPane>

@@ -88,6 +88,52 @@ CREATE TABLE activity_jury (
                                FOREIGN KEY (jury_id)     REFERENCES user(id)
 );
 
+CREATE TABLE activity_task (
+                               id           INT PRIMARY KEY AUTO_INCREMENT,
+                               activity_id  INT NOT NULL,
+                               title        VARCHAR(512) NOT NULL,
+                               created_by   INT,
+                               FOREIGN KEY (activity_id) REFERENCES activity(id),
+                               FOREIGN KEY (created_by)  REFERENCES user(id)
+);
+
+CREATE TABLE resource (
+                           id           INT PRIMARY KEY AUTO_INCREMENT,
+                           activity_id  INT NOT NULL,
+                           name         VARCHAR(255) NOT NULL,
+                           url          VARCHAR(512),
+                           uploaded_by  INT,
+                           FOREIGN KEY (activity_id) REFERENCES activity(id),
+                           FOREIGN KEY (uploaded_by) REFERENCES user(id)
+);
+
+CREATE TABLE moderator_application (
+                                       id            INT PRIMARY KEY AUTO_INCREMENT,
+                                       activity_id   INT NOT NULL,
+                                       moderator_id  INT NOT NULL,
+                                       status        ENUM('SENT','APPROVED','REJECTED') DEFAULT 'SENT',
+                                       comment       VARCHAR(512),
+                                       created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                       FOREIGN KEY (activity_id)  REFERENCES activity(id),
+                                       FOREIGN KEY (moderator_id) REFERENCES user(id)
+);
+
+CREATE TABLE moderator_assignment (
+                                      user_id  INT NOT NULL,
+                                      event_id INT NOT NULL,
+                                      PRIMARY KEY (user_id, event_id),
+                                      FOREIGN KEY (user_id) REFERENCES user(id),
+                                      FOREIGN KEY (event_id) REFERENCES event(id)
+);
+
+CREATE TABLE participant_event (
+                                   participant_id INT NOT NULL,
+                                   event_id       INT NOT NULL,
+                                   PRIMARY KEY (participant_id, event_id),
+                                   FOREIGN KEY (participant_id) REFERENCES user(id),
+                                   FOREIGN KEY (event_id)       REFERENCES event(id)
+);
+
 -- =========================================
 -- 4. Начальные данные (роли + примеры)
 -- =========================================
