@@ -1,9 +1,58 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
 
-<AnchorPane prefWidth="1024.0" prefHeight="768.0"
+<BorderPane prefWidth="1024.0" prefHeight="720.0"
             xmlns="http://javafx.com/javafx/20" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.example.conferenceapp.controller.ParticipantController">
-    <!-- TODO: Design UI here -->
-</AnchorPane>
+
+    <left>
+        <VBox spacing="10" style="-fx-padding: 20; -fx-background-color: #E6FFFF;">
+            <Label text="Мои активности" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+            <ListView fx:id="activityList" prefWidth="220" VBox.vgrow="ALWAYS"/>
+        </VBox>
+    </left>
+
+    <center>
+        <VBox spacing="15" style="-fx-padding: 20;">
+            <Label fx:id="greetingLabel" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
+            <Label fx:id="activityInfoLabel" style="-fx-font-size: 14px;"/>
+
+            <TabPane tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
+                <tabs>
+                    <Tab text="Участники">
+                        <BorderPane>
+                            <center>
+                                <ListView fx:id="participantList" />
+                            </center>
+                        </BorderPane>
+                    </Tab>
+                    <Tab text="Ресурсы">
+                        <BorderPane>
+                            <center>
+                                <TableView fx:id="resourceTable" VBox.vgrow="ALWAYS">
+                                    <columns>
+                                        <TableColumn fx:id="resourceNameCol" text="Название" prefWidth="220"/>
+                                        <TableColumn fx:id="resourceOwnerCol" text="Добавил" prefWidth="180"/>
+                                        <TableColumn fx:id="resourceDateCol" text="Дата" prefWidth="120"/>
+                                        <TableColumn fx:id="resourceActionsCol" text="Действия" prefWidth="160"/>
+                                    </columns>
+                                </TableView>
+                            </center>
+                            <bottom>
+                                <HBox alignment="CENTER_RIGHT" spacing="10" padding="10">
+                                    <Button fx:id="kanbanBtn" text="Kanban"/>
+                                    <Button fx:id="addResourceBtn" text="Добавить ресурс" styleClass="button-primary"/>
+                                </HBox>
+                            </bottom>
+                        </BorderPane>
+                    </Tab>
+                </tabs>
+            </TabPane>
+
+            <Label fx:id="statusLabel" style="-fx-text-fill: #006400;"/>
+        </VBox>
+    </center>
+</BorderPane>

@@ -85,6 +85,17 @@ public class MainController {
     private void loadData() {
         List<Event> all = eventDao.find(null, null);
         master.setAll(all);
+        populateDirectionFilter();
+    }
+
+    private void populateDirectionFilter() {
+        directionFilter.getItems().clear();
+        master.stream()
+                .map(Event::getDirection)
+                .filter(s -> s != null && !s.isBlank())
+                .distinct()
+                .sorted()
+                .forEach(directionFilter.getItems()::add);
     }
 
     /* ---------- применение фильтров ---------- */

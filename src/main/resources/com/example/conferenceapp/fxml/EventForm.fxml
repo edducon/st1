@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<DialogPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.example.conferenceapp.controller.EventFormController">
+    <headerText>Новое мероприятие</headerText>
+    <content>
+        <VBox spacing="14" padding="15">
+            <GridPane hgap="10" vgap="10">
+                <columnConstraints>
+                    <ColumnConstraints halignment="RIGHT" minWidth="140" />
+                    <ColumnConstraints hgrow="ALWAYS" />
+                    <ColumnConstraints halignment="RIGHT" minWidth="120" />
+                    <ColumnConstraints hgrow="ALWAYS" />
+                </columnConstraints>
+
+                <Label text="Название:" GridPane.rowIndex="0" GridPane.columnIndex="0" />
+                <TextField fx:id="titleField" GridPane.rowIndex="0" GridPane.columnIndex="1" GridPane.columnSpan="3" />
+
+                <Label text="Направление:" GridPane.rowIndex="1" GridPane.columnIndex="0" />
+                <ComboBox fx:id="directionBox" editable="true" GridPane.rowIndex="1" GridPane.columnIndex="1" />
+                <Label text="Город:" GridPane.rowIndex="1" GridPane.columnIndex="2" />
+                <ComboBox fx:id="cityBox" editable="true" GridPane.rowIndex="1" GridPane.columnIndex="3" />
+
+                <Label text="Дата начала:" GridPane.rowIndex="2" GridPane.columnIndex="0" />
+                <DatePicker fx:id="startDatePicker" GridPane.rowIndex="2" GridPane.columnIndex="1" />
+                <Label text="Время начала:" GridPane.rowIndex="2" GridPane.columnIndex="2" />
+                <ComboBox fx:id="startTimeBox" GridPane.rowIndex="2" GridPane.columnIndex="3" />
+
+                <Label text="Дата окончания:" GridPane.rowIndex="3" GridPane.columnIndex="0" />
+                <DatePicker fx:id="endDatePicker" GridPane.rowIndex="3" GridPane.columnIndex="1" />
+                <Label text="Время окончания:" GridPane.rowIndex="3" GridPane.columnIndex="2" />
+                <ComboBox fx:id="endTimeBox" GridPane.rowIndex="3" GridPane.columnIndex="3" />
+            </GridPane>
+
+            <Label text="Описание" />
+            <TextArea fx:id="descriptionArea" prefRowCount="3" wrapText="true" />
+
+            <Label text="Активности" />
+            <TableView fx:id="activityTable" prefHeight="200">
+                <columns>
+                    <TableColumn fx:id="activityTitleCol" text="Название" prefWidth="200" />
+                    <TableColumn fx:id="activityStartCol" text="Начало" prefWidth="120" />
+                    <TableColumn fx:id="activityEndCol" text="Окончание" prefWidth="120" />
+                    <TableColumn fx:id="activityJuryCol" text="Жюри" prefWidth="220" />
+                </columns>
+            </TableView>
+
+            <HBox spacing="10" alignment="CENTER_RIGHT">
+                <Button fx:id="addActivityBtn" text="Добавить активность" onAction="#onAddActivity" />
+                <Button fx:id="removeActivityBtn" text="Удалить" onAction="#onRemoveActivity" />
+            </HBox>
+        </VBox>
+    </content>
+    <buttonTypes>
+        <ButtonType fx:constant="OK" />
+        <ButtonType fx:constant="CANCEL" />
+    </buttonTypes>
+</DialogPane>

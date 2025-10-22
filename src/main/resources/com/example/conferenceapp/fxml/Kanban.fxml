@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.example.conferenceapp.controller.KanbanController"
+            prefWidth="960" prefHeight="640">
+    <top>
+        <HBox spacing="12" padding="15" alignment="CENTER_LEFT">
+            <Label text="Мероприятие" />
+            <ComboBox fx:id="eventBox" prefWidth="320" />
+            <Label fx:id="infoLabel" text="Активностей: 0" />
+            <Pane HBox.hgrow="ALWAYS" />
+            <Button fx:id="exportBtn" text="Экспорт в PDF" />
+        </HBox>
+    </top>
+    <center>
+        <ScrollPane fx:id="boardScroll" pannable="true" hbarPolicy="AS_NEEDED" vbarPolicy="AS_NEEDED">
+            <content>
+                <AnchorPane fx:id="boardPane" prefWidth="920" prefHeight="560" />
+            </content>
+        </ScrollPane>
+    </center>
+</BorderPane>

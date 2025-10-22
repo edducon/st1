@@ -12,7 +12,7 @@ import javafx.stage.Stage;
 
 import java.time.LocalTime;
 
-public class OrganizerController {
+public class OrganizerController implements UserAware {
 
     /* ─ UI ─────────────────────────────────────────────────────────── */
     @FXML private ImageView photo;
@@ -32,13 +32,13 @@ public class OrganizerController {
         btnProfile.setOnAction(e ->
                 ProfileController.open(btnProfile.getScene(), user));
 
-        /* остальные кнопки-заглушки */
-        btnEvents      .setOnAction(e -> info("Окно «Мероприятия» ещё не сделано"));
-        btnParticipants.setOnAction(e -> info("Окно «Участники» ещё не сделано"));
-        btnJury        .setOnAction(e -> info("Окно «Жюри» ещё не сделано"));
+        btnEvents.setOnAction(e -> OrganizerEventsController.open(btnEvents.getScene(), user));
+        btnParticipants.setOnAction(e -> ParticipantsController.open(btnParticipants.getScene(), user));
+        btnJury.setOnAction(e -> JuryDirectoryController.open(btnJury.getScene(), user));
     }
 
     /** метод вызывается LoginController-ом сразу после загрузки окна */
+    @Override
     public void setUser(User u) {
         this.user = u;
 

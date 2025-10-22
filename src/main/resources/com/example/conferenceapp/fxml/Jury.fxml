@@ -1,9 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
 
-<AnchorPane prefWidth="1024.0" prefHeight="768.0"
+<BorderPane prefWidth="960.0" prefHeight="680.0"
             xmlns="http://javafx.com/javafx/20" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.example.conferenceapp.controller.JuryController">
-    <!-- TODO: Design UI here -->
-</AnchorPane>
+
+    <top>
+        <VBox spacing="10" padding="20" style="-fx-background-color: #E6FFFF;">
+            <Label text="Жюри / Модераторы" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
+            <Label fx:id="greetingLabel" style="-fx-font-size: 16px;"/>
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Label text="Фамилия:"/>
+                <TextField fx:id="surnameField" promptText="Поиск по фамилии" prefWidth="200"/>
+                <Label text="Мероприятие:"/>
+                <ComboBox fx:id="eventBox" promptText="Все мероприятия" prefWidth="220"/>
+                <Pane HBox.hgrow="ALWAYS"/>
+                <Button fx:id="registerBtn" text="Регистрация"/>
+            </HBox>
+        </VBox>
+    </top>
+
+    <center>
+        <TableView fx:id="table" BorderPane.alignment="CENTER">
+            <columns>
+                <TableColumn fx:id="photoCol" text="Фото" prefWidth="90"/>
+                <TableColumn fx:id="nameCol" text="ФИО" prefWidth="240"/>
+                <TableColumn fx:id="emailCol" text="E-mail" prefWidth="200"/>
+                <TableColumn fx:id="roleCol" text="Роль" prefWidth="120"/>
+                <TableColumn fx:id="eventCol" text="Мероприятие" prefWidth="180"/>
+            </columns>
+        </TableView>
+    </center>
+
+    <bottom>
+        <HBox alignment="CENTER_RIGHT" padding="15" style="-fx-background-color: #E6FFFF;">
+            <Label fx:id="countLabel" style="-fx-font-size: 14px;"/>
+        </HBox>
+    </bottom>
+</BorderPane>

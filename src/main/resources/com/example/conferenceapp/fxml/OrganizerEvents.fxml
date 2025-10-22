@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<DialogPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.example.conferenceapp.controller.OrganizerEventsController">
+    <content>
+        <VBox spacing="12" padding="15">
+            <GridPane hgap="10" vgap="8">
+                <columnConstraints>
+                    <ColumnConstraints halignment="RIGHT" minWidth="120" />
+                    <ColumnConstraints hgrow="ALWAYS" />
+                </columnConstraints>
+                <rowConstraints>
+                    <RowConstraints valignment="CENTER" />
+                    <RowConstraints valignment="CENTER" />
+                </rowConstraints>
+                <Label text="Направление:" GridPane.rowIndex="0" GridPane.columnIndex="0" />
+                <ComboBox fx:id="directionFilter" promptText="Все направления"
+                          GridPane.rowIndex="0" GridPane.columnIndex="1" />
+
+                <Label text="Дата:" GridPane.rowIndex="1" GridPane.columnIndex="0" />
+                <DatePicker fx:id="dateFilter" GridPane.rowIndex="1" GridPane.columnIndex="1" />
+            </GridPane>
+
+            <TableView fx:id="table" prefHeight="360">
+                <columns>
+                    <TableColumn fx:id="logoCol" text="Логотип" prefWidth="100" />
+                    <TableColumn fx:id="titleCol" text="Название" prefWidth="220" />
+                    <TableColumn fx:id="directionCol" text="Направление" prefWidth="160" />
+                    <TableColumn fx:id="startCol" text="Дата и время" prefWidth="180" />
+                </columns>
+            </TableView>
+
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Label fx:id="summaryLabel" text="Всего мероприятий: 0" />
+                <Pane HBox.hgrow="ALWAYS" />
+                <Button fx:id="createBtn" text="Создать" onAction="#onCreate" />
+                <Button fx:id="exportBtn" text="Экспорт в CSV" onAction="#onExportCsv" />
+                <Button fx:id="kanbanBtn" text="Kanban-доска" onAction="#onOpenKanban" />
+                <Button text="Сбросить" onAction="#onReset" />
+            </HBox>
+        </VBox>
+    </content>
+</DialogPane>
