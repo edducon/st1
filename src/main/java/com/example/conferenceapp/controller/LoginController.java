@@ -111,11 +111,11 @@ public class LoginController {
             st.setTitle("Добро пожаловать, " + u.getSecondName());
             st.initModality(Modality.WINDOW_MODAL);
 
-            /* если это Organizer.fxml — передадим пользователя */
-            if(u.getRole()== User.Role.ORGANIZER){
-                OrganizerController c = fx.getController();
-                c.setUser(u);
+            Object controller = fx.getController();
+            if (controller instanceof UserAware aware) {
+                aware.setUser(u);
             }
+
             st.show();
         }catch(IOException ex){ ex.printStackTrace(); }
     }

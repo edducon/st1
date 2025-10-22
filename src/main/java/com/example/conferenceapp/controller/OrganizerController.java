@@ -12,7 +12,7 @@ import javafx.stage.Stage;
 
 import java.time.LocalTime;
 
-public class OrganizerController {
+public class OrganizerController implements UserAware {
 
     /* ─ UI ─────────────────────────────────────────────────────────── */
     @FXML private ImageView photo;
@@ -39,6 +39,7 @@ public class OrganizerController {
     }
 
     /** метод вызывается LoginController-ом сразу после загрузки окна */
+    @Override
     public void setUser(User u) {
         this.user = u;
 
