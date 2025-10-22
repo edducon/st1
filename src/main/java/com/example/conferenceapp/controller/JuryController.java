@@ -1,9 +1,11 @@
 package com.example.conferenceapp.controller;
 
+import com.example.conferenceapp.dao.EventDao;
+import com.example.conferenceapp.dao.PersonDao;
+import com.example.conferenceapp.model.Event;
+import com.example.conferenceapp.model.PersonCard;
 import com.example.conferenceapp.model.User;
 import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
@@ -12,17 +14,33 @@ import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 
-import java.net.URL;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 /**
- * Просмотр жюри и модераторов с возможностью фильтрации и подсчёта.
+ * Просмотр жюри и модераторов с фильтрацией по фамилии и мероприятию.
  */
 public class JuryController implements UserAware {
+
+    @FXML private Label greetingLabel;
+    @FXML private TextField surnameField;
+    @FXML private ComboBox<Event> eventBox;
+    @FXML private TableView<PersonCard> table;
+    @FXML private TableColumn<PersonCard, ImageView> photoCol;
+    @FXML private TableColumn<PersonCard, String> nameCol;
+    @FXML private TableColumn<PersonCard, String> emailCol;
+    @FXML private TableColumn<PersonCard, String> roleCol;
+    @FXML private TableColumn<PersonCard, String> eventCol;
+    @FXML private Label countLabel;
+    @FXML private Button registerBtn;
+
+    private final ObservableList<PersonCard> master = FXCollections.observableArrayList();
+    private final FilteredList<PersonCard> filtered = new FilteredList<>(master, p -> true);
+    private final PersonDao personDao = new PersonDao();
+    private final EventDao eventDao = new EventDao();
+
+    private User user;
+    private Image defaultAvatar;
 
     /* ─ UI ─────────────────────────────────────────────────────────── */
     @FXML private Label greetingLabel;
@@ -46,136 +64,86 @@ public class JuryController implements UserAware {
     public void initialize() {
         loadDefaultAvatar();
         configureTable();
-        loadSampleData();
-        configureFilters();
 
         table.setItems(filtered);
-        updateCount();
 
-        registerBtn.setOnAction(e -> onRegister());
+        surnameField.textProperty().addListener((obs, o, n) -> applyFilters());
+        eventBox.valueProperty().addListener((obs, o, n) -> reload());
+
+        registerBtn.setOnAction(e -> JuryRegistrationController.open(table.getScene(), user, this::reload));
     }
 
     private void loadDefaultAvatar() {
-        URL url = getClass().getResource("/com/example/conferenceapp/images/logo.png");
+        var url = getClass().getResource("/com/example/conferenceapp/images/logo.png");
         if (url != null) {
             defaultAvatar = new Image(url.toExternalForm(), 48, 48, true, true);
         }
     }
 
     private void configureTable() {
-        photoCol.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(createAvatar(cell.getValue().getPhotoPath())));
-        nameCol .setCellValueFactory(cell -> cell.getValue().fullNameProperty());
-        emailCol.setCellValueFactory(cell -> cell.getValue().emailProperty());
-        roleCol .setCellValueFactory(cell -> cell.getValue().roleProperty());
-        eventCol.setCellValueFactory(cell -> cell.getValue().eventProperty());
-        table.setPlaceholder(new Label("Нет данных"));
+        photoCol.setCellValueFactory(param -> {
+            String photoPath = param.getValue().getPhotoPath();
+            Image image = null;
+            if (photoPath != null && !photoPath.isBlank()) {
+                image = new Image("file:" + photoPath, 48, 48, true, true);
+            } else {
+                image = defaultAvatar;
+            }
+            ImageView view = new ImageView(image);
+            view.setFitWidth(48);
+            view.setFitHeight(48);
+            view.setPreserveRatio(true);
+            return new ReadOnlyObjectWrapper<>(view);
+        });
+        nameCol.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue().getFullName()));
+        emailCol.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue().getEmail()));
+        roleCol.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue().getRole()));
+        eventCol.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue().getEventTitle()));
     }
 
-    private void loadSampleData() {
-        master.setAll(List.of(
-                new PersonEntry("Иванов Сергей Петрович", "jury", "ivanov@example.com", "Security Weekend", null),
-                new PersonEntry("Петрова Елена Владимировна", "jury", "petrova@example.com", "Digital Security Day", null),
-                new PersonEntry("Сидоров Андрей", "moderator", "sidorov@example.com", "Security Weekend", null),
-                new PersonEntry("Антонова Марина", "moderator", "antonova@example.com", "CyberLeaders", null),
-                new PersonEntry("Кузнецов Михаил", "jury", "kuznetsov@example.com", "CyberLeaders", null)
-        ));
+    private void loadEvents() {
+        List<Event> events = eventDao.find(null, null);
+        eventBox.setItems(FXCollections.observableArrayList(events));
+        eventBox.setButtonCell(new OrganizerEventsController.EventCell());
+        eventBox.setCellFactory(cb -> new OrganizerEventsController.EventCell());
     }
 
-    private void configureFilters() {
-        eventBox.getItems().setAll(master.stream()
-                .map(PersonEntry::getEvent)
-                .filter(Objects::nonNull)
-                .distinct()
-                .sorted(Comparator.naturalOrder())
-                .collect(Collectors.toList()));
-
-        surnameField.textProperty().addListener((obs, oldV, newV) -> applyFilters());
-        eventBox.setOnAction(e -> applyFilters());
+    private void reload() {
+        Integer eventId = eventBox.getValue() != null ? eventBox.getValue().getId() : null;
+        master.setAll(personDao.findJuryAndModerators(null, null, eventId));
+        applyFilters();
     }
 
     private void applyFilters() {
-        String term = surnameField.getText() == null ? "" : surnameField.getText().trim().toLowerCase(Locale.ROOT);
-        String event = eventBox.getValue();
-
-        filtered.setPredicate(entry ->
-                (term.isEmpty() || entry.getSurname().startsWith(term)) &&
-                        (event == null || event.equals(entry.getEvent()))
-        );
-
-        updateCount();
-    }
-
-    private void updateCount() {
+        String query = surnameField.getText();
+        filtered.setPredicate(card -> {
+            if (query != null && !query.isBlank()) {
+                String normalized = query.trim().toLowerCase(Locale.ROOT);
+                return card.getFullName().toLowerCase(Locale.ROOT).contains(normalized);
+            }
+            return true;
+        });
         countLabel.setText("Количество: " + filtered.size());
     }
 
-    private void onRegister() {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION,
-                "Регистрация жюри/модераторов будет доступна в админ-панели.");
-        alert.setHeaderText(null);
-        alert.initOwner(registerBtn.getScene().getWindow());
-        alert.showAndWait();
-    }
-
-    private ImageView createAvatar(String photoPath) {
-        Image image = null;
-        if (photoPath != null && !photoPath.isBlank()) {
-            image = new Image("file:" + photoPath, 48, 48, true, true);
-        } else {
-            image = defaultAvatar;
-        }
-        ImageView view = new ImageView();
-        if (image != null) {
-            view.setImage(image);
-        }
-        view.setFitWidth(48);
-        view.setFitHeight(48);
-        view.setPreserveRatio(true);
-        return view;
-    }
-
-    /* ─ UserAware ─────────────────────────────────────────────────── */
     @Override
     public void setUser(User user) {
+        this.user = user;
+        loadEvents();
+        reload();
+
         if (user == null) {
             greetingLabel.setText("Жюри и модераторы");
+            registerBtn.setDisable(true);
             return;
         }
+
+        registerBtn.setDisable(user.getRole() != User.Role.ORGANIZER);
         String welcome = switch (user.getRole()) {
-            case MODERATOR -> "Справочник коллег";
-            case ORGANIZER -> "Управление жюри";
+            case ORGANIZER -> "Справочник жюри";
+            case MODERATOR -> "Коллеги по мероприятиям";
             default -> "Жюри и модераторы";
         };
-        greetingLabel.setText("%s, %s".formatted(welcome, user.getFirstName()));
-    }
-
-    /* ─ model ─────────────────────────────────────────────────────── */
-    public static class PersonEntry {
-        private final StringProperty fullName = new SimpleStringProperty();
-        private final StringProperty role = new SimpleStringProperty();
-        private final StringProperty email = new SimpleStringProperty();
-        private final StringProperty event = new SimpleStringProperty();
-        private final StringProperty photoPath = new SimpleStringProperty();
-
-        public PersonEntry(String fullName, String roleCode, String email, String event, String photoPath) {
-            this.fullName.set(fullName);
-            this.role.set(roleCode.equals("jury") ? "Жюри" : "Модератор");
-            this.email.set(email);
-            this.event.set(event);
-            this.photoPath.set(photoPath);
-        }
-
-        public String getSurname() {
-            String[] parts = fullName.get().split("\\s+");
-            return parts.length == 0 ? "" : parts[0].toLowerCase(Locale.ROOT);
-        }
-
-        public String getEvent() { return event.get(); }
-        public String getPhotoPath() { return photoPath.get(); }
-
-        public StringProperty fullNameProperty() { return fullName; }
-        public StringProperty roleProperty() { return role; }
-        public StringProperty emailProperty() { return email; }
-        public StringProperty eventProperty() { return event; }
+        greetingLabel.setText(welcome + ", " + user.getFirstName() + "!");
     }
 }

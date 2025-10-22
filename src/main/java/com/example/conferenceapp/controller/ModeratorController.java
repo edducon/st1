@@ -48,6 +48,32 @@ public class ModeratorController implements UserAware {
 
     private User moderator;
 
+    @FXML private Label greetingLabel;
+    @FXML private ComboBox<String> directionBox;
+    @FXML private ComboBox<Event> eventBox;
+    @FXML private TableView<ModeratorSlot> activityTable;
+    @FXML private TableColumn<ModeratorSlot, String> activityCol;
+    @FXML private TableColumn<ModeratorSlot, String> eventCol;
+    @FXML private TableColumn<ModeratorSlot, String> dateCol;
+    @FXML private TableColumn<ModeratorSlot, String> timeCol;
+    @FXML private TableColumn<ModeratorSlot, String> statusCol;
+    @FXML private Button applyBtn;
+    @FXML private Button myActivitiesBtn;
+    @FXML private Label infoLabel;
+
+    private final ObservableList<ModeratorSlot> master = FXCollections.observableArrayList();
+    private final FilteredList<ModeratorSlot> filtered = new FilteredList<>(master, s -> true);
+
+    private final ModeratorDao moderatorDao = new ModeratorDao();
+    private final EventDao eventDao = new EventDao();
+    private final ReferenceDao referenceDao = new ReferenceDao();
+    private final ActivityDao activityDao = new ActivityDao();
+
+    private final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+    private final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
+
+    private User moderator;
+
     /* ─ UI ─────────────────────────────────────────────────────────── */
     @FXML private Label greetingLabel;
     @FXML private ComboBox<String> directionBox;

@@ -2,14 +2,21 @@ package com.example.conferenceapp.dao;
 
 import com.example.conferenceapp.model.Activity;
 import com.example.conferenceapp.model.ActivityTask;
+import com.example.conferenceapp.model.ParticipantActivity;
 import com.example.conferenceapp.model.ResourceItem;
 import com.example.conferenceapp.util.DBUtil;
 
 import java.sql.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class ActivityDao {
 
@@ -180,7 +187,8 @@ public class ActivityDao {
                    r.activity_id,
                    r.name,
                    r.url,
-                   u.full_name AS uploaded_by
+                   u.full_name AS uploaded_by,
+                   r.uploaded_at
               FROM resource r
               LEFT JOIN user u ON u.id = r.uploaded_by
              WHERE r.activity_id = ?
@@ -198,7 +206,10 @@ public class ActivityDao {
                             rs.getInt("activity_id"),
                             rs.getString("name"),
                             rs.getString("url"),
-                            rs.getString("uploaded_by")
+                            rs.getString("uploaded_by"),
+                            rs.getTimestamp("uploaded_at") != null
+                                    ? rs.getTimestamp("uploaded_at").toLocalDateTime()
+                                    : null
                     ));
                 }
             }
@@ -208,29 +219,44 @@ public class ActivityDao {
         return resources;
     }
 
-    public void addResource(int activityId, String name, String url, int userId) {
+    public ResourceItem addResource(int activityId, String name, String url,
+                                    Integer userId, String uploadedByName) {
         String sql = "INSERT INTO resource(activity_id, name, url, uploaded_by) VALUES(?,?,?,?)";
         try (Connection c = DBUtil.getConnection();
-             PreparedStatement ps = c.prepareStatement(sql)) {
+             PreparedStatement ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             ps.setInt(1, activityId);
             ps.setString(2, name);
             ps.setString(3, url);
-            ps.setInt(4, userId);
+            if (userId != null) {
+                ps.setInt(4, userId);
+            } else {
+                ps.setNull(4, Types.INTEGER);
+            }
             ps.executeUpdate();
+
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                if (rs.next()) {
+                    int id = rs.getInt(1);
+                    return new ResourceItem(id, activityId, name, url,
+                            uploadedByName, LocalDateTime.now());
+                }
+            }
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
+        return null;
     }
 
-    public void deleteResource(int resourceId) {
+    public boolean deleteResource(int resourceId) {
         try (Connection c = DBUtil.getConnection();
              PreparedStatement ps = c.prepareStatement("DELETE FROM resource WHERE id = ?")) {
             ps.setInt(1, resourceId);
-            ps.executeUpdate();
+            return ps.executeUpdate() > 0;
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
+        return false;
     }
 
     public boolean hasCollision(int moderatorId, LocalDate date, LocalTime start, LocalTime end) {
@@ -266,5 +292,167 @@ public class ActivityDao {
             ex.printStackTrace();
         }
         return false;
+    }
+
+    public List<ParticipantActivity> findForParticipant(int participantId) {
+        String sql = """
+            SELECT a.id,
+                   a.event_id,
+                   a.title,
+                   e.title AS event_title,
+                   DATE(e.start_datetime) + INTERVAL (a.day_num-1) DAY AS activity_date,
+                   a.start_time,
+                   a.end_time
+              FROM participant_event pe
+              JOIN event e ON e.id = pe.event_id
+              JOIN activity a ON a.event_id = e.id
+             WHERE pe.participant_id = ?
+             ORDER BY activity_date, a.start_time
+        """;
+
+        List<ParticipantActivity> activities = new ArrayList<>();
+        Map<Integer, ParticipantActivity> byActivity = new LinkedHashMap<>();
+        Set<Integer> eventIds = new HashSet<>();
+        Set<Integer> activityIds = new HashSet<>();
+
+        try (Connection c = DBUtil.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+
+            ps.setInt(1, participantId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Date dateValue = rs.getDate("activity_date");
+                    Time startValue = rs.getTime("start_time");
+                    Time endValue = rs.getTime("end_time");
+                    if (dateValue == null || startValue == null || endValue == null) {
+                        continue;
+                    }
+
+                    LocalDate activityDate = dateValue.toLocalDate();
+                    ParticipantActivity activity =
+                            new ParticipantActivity(
+                                    rs.getInt("id"),
+                                    rs.getInt("event_id"),
+                                    rs.getString("title"),
+                                    rs.getString("event_title"),
+                                    LocalDateTime.of(activityDate, startValue.toLocalTime()),
+                                    LocalDateTime.of(activityDate, endValue.toLocalTime())
+                            );
+                    activities.add(activity);
+                    byActivity.put(activity.getActivityId(), activity);
+                    eventIds.add(activity.getEventId());
+                    activityIds.add(activity.getActivityId());
+                }
+            }
+
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+
+        if (activities.isEmpty()) {
+            return activities;
+        }
+
+        loadParticipants(eventIds, activities);
+        loadResources(activityIds, byActivity);
+        return activities;
+    }
+
+    private void loadParticipants(Set<Integer> eventIds,
+                                  List<ParticipantActivity> activities) {
+        if (eventIds.isEmpty()) {
+            return;
+        }
+
+        String placeholders = String.join(",", java.util.Collections.nCopies(eventIds.size(), "?"));
+        String sql = """
+            SELECT pe.event_id,
+                   u.full_name
+              FROM participant_event pe
+              JOIN user u ON u.id = pe.participant_id
+             WHERE pe.event_id IN (%s)
+             ORDER BY u.full_name
+        """.formatted(placeholders);
+
+        Map<Integer, List<String>> byEvent = new HashMap<>();
+
+        try (Connection c = DBUtil.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+
+            int idx = 1;
+            for (Integer eventId : eventIds) {
+                ps.setInt(idx++, eventId);
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    byEvent.computeIfAbsent(rs.getInt("event_id"), k -> new ArrayList<>())
+                            .add(rs.getString("full_name"));
+                }
+            }
+
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+
+        for (ParticipantActivity activity : activities) {
+            List<String> participants = byEvent.get(activity.getEventId());
+            if (participants != null) {
+                participants.forEach(activity::withParticipant);
+            }
+        }
+    }
+
+    private void loadResources(Set<Integer> activityIds,
+                               Map<Integer, ParticipantActivity> byActivity) {
+        if (activityIds.isEmpty()) {
+            return;
+        }
+
+        String placeholders = String.join(",", java.util.Collections.nCopies(activityIds.size(), "?"));
+        String sql = """
+            SELECT r.id,
+                   r.activity_id,
+                   r.name,
+                   r.url,
+                   u.full_name AS uploaded_by,
+                   r.uploaded_at
+              FROM resource r
+              LEFT JOIN user u ON u.id = r.uploaded_by
+             WHERE r.activity_id IN (%s)
+             ORDER BY r.id
+        """.formatted(placeholders);
+
+        try (Connection c = DBUtil.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+
+            int idx = 1;
+            for (Integer activityId : activityIds) {
+                ps.setInt(idx++, activityId);
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    ParticipantActivity activity = byActivity.get(rs.getInt("activity_id"));
+                    if (activity == null) {
+                        continue;
+                    }
+                    activity.withResource(new ResourceItem(
+                            rs.getInt("id"),
+                            rs.getInt("activity_id"),
+                            rs.getString("name"),
+                            rs.getString("url"),
+                            rs.getString("uploaded_by"),
+                            rs.getTimestamp("uploaded_at") != null
+                                    ? rs.getTimestamp("uploaded_at").toLocalDateTime()
+                                    : null
+                    ));
+                }
+            }
+
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
     }
 }

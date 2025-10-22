@@ -25,8 +25,15 @@ public class PersonDao {
               FROM user u
               JOIN role r ON r.id = u.role_id
               LEFT JOIN direction d ON d.id = u.direction_id
-              LEFT JOIN moderator_assignment ma ON ma.user_id = u.id
-              LEFT JOIN event e ON e.id = ma.event_id
+              LEFT JOIN (
+                    SELECT ma.user_id, ma.event_id
+                      FROM moderator_assignment ma
+                    UNION
+                    SELECT aj.jury_id AS user_id, a.event_id
+                      FROM activity_jury aj
+                      JOIN activity a ON a.id = aj.activity_id
+              ) rel ON rel.user_id = u.id
+              LEFT JOIN event e ON e.id = rel.event_id
              WHERE r.code IN ('jury','moderator')
         """);
 
@@ -37,7 +44,7 @@ public class PersonDao {
             sql.append(" AND u.full_name LIKE ?");
         }
         if (eventId != null) {
-            sql.append(" AND ma.event_id = ?");
+            sql.append(" AND rel.event_id = ?");
         }
 
         sql.append(" ORDER BY u.full_name");

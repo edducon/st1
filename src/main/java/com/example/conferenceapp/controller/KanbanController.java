@@ -72,18 +72,28 @@ public class KanbanController {
     }
 
     private void loadEvents(Event selected) {
-        if (organizer == null) return;
-        events.setAll(eventDao.findByOrganizer(organizer.getId(), null, null));
-        if (!events.isEmpty()) {
+        events.clear();
+        if (organizer == null) {
             if (selected != null) {
-                events.stream().filter(ev -> ev.getId() == selected.getId()).findFirst()
-                        .ifPresent(eventBox::setValue);
+                events.add(selected);
             }
-            if (eventBox.getValue() == null) {
-                eventBox.setValue(events.get(0));
-            }
+            eventBox.setDisable(true);
+            eventBox.setItems(events);
+            eventBox.setValue(selected);
             refreshBoard();
+            return;
         }
+
+        eventBox.setDisable(false);
+        events.setAll(eventDao.findByOrganizer(organizer.getId(), null, null));
+        if (selected != null) {
+            events.stream().filter(ev -> ev.getId() == selected.getId()).findFirst()
+                    .ifPresent(eventBox::setValue);
+        }
+        if (eventBox.getValue() == null && !events.isEmpty()) {
+            eventBox.setValue(events.get(0));
+        }
+        refreshBoard();
     }
 
     private void refreshBoard() {

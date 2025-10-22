@@ -198,4 +198,55 @@ public class EventDao {
                     activity.getEndTime()));
         }
     }
+
+    public Event findById(int eventId) {
+        String sql = """
+            SELECT e.id,
+                   e.title,
+                   e.direction_id,
+                   d.name AS direction,
+                   e.start_datetime,
+                   e.end_datetime,
+                   e.city_id,
+                   c.name AS city,
+                   e.organizer_id,
+                   u.full_name AS organizer,
+                   e.logo,
+                   e.description
+              FROM event e
+              JOIN direction d ON d.id = e.direction_id
+              LEFT JOIN city c ON c.id = e.city_id
+              LEFT JOIN user u ON u.id = e.organizer_id
+             WHERE e.id = ?
+        """;
+
+        try (Connection c = DBUtil.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+
+            ps.setInt(1, eventId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return new Event(
+                            rs.getInt("id"),
+                            rs.getString("title"),
+                            rs.getInt("direction_id"),
+                            rs.getString("direction"),
+                            rs.getTimestamp("start_datetime").toLocalDateTime(),
+                            rs.getTimestamp("end_datetime").toLocalDateTime(),
+                            (Integer) rs.getObject("city_id"),
+                            rs.getString("city"),
+                            (Integer) rs.getObject("organizer_id"),
+                            rs.getString("organizer"),
+                            rs.getString("logo"),
+                            rs.getString("description")
+                    );
+                }
+            }
+
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+        return null;
+    }
 }

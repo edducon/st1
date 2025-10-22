@@ -62,10 +62,12 @@ CREATE TABLE event (
                        start_datetime  DATETIME NOT NULL,
                        end_datetime    DATETIME NOT NULL,
                        city_id         INT,
+                       organizer_id    INT,
                        logo            VARCHAR(128),
                        description     TEXT,
                        FOREIGN KEY (direction_id) REFERENCES direction(id),
-                       FOREIGN KEY (city_id)      REFERENCES city(id)
+                       FOREIGN KEY (city_id)      REFERENCES city(id),
+                       FOREIGN KEY (organizer_id) REFERENCES user(id)
 );
 
 CREATE TABLE activity (
@@ -103,6 +105,7 @@ CREATE TABLE resource (
                            name         VARCHAR(255) NOT NULL,
                            url          VARCHAR(512),
                            uploaded_by  INT,
+                           uploaded_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                            FOREIGN KEY (activity_id) REFERENCES activity(id),
                            FOREIGN KEY (uploaded_by) REFERENCES user(id)
 );

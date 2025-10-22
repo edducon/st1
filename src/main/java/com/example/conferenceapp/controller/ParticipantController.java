@@ -1,6 +1,12 @@
 package com.example.conferenceapp.controller;
 
+import com.example.conferenceapp.dao.ActivityDao;
+import com.example.conferenceapp.dao.EventDao;
+import com.example.conferenceapp.model.Event;
+import com.example.conferenceapp.model.ParticipantActivity;
+import com.example.conferenceapp.model.ResourceItem;
 import com.example.conferenceapp.model.User;
+import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -10,23 +16,24 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
-import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.layout.GridPane;
 import javafx.stage.Window;
-import java.time.LocalDate;
+
+import java.awt.Desktop;
+import java.net.URI;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Objects;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
- * Контроллер окна участника / экрана «Мои активности».
- * В демо-версии использует статические данные и даёт возможность
- * управлять ресурсами выбранной активности.
+ * Рабочее место участника: отображение активностей и ресурсов.
  */
 public class ParticipantController implements UserAware {
 
-    /* ─ UI ─────────────────────────────────────────────────────────── */
     @FXML private Label greetingLabel;
     @FXML private Label activityInfoLabel;
     @FXML private ListView<ActivityCard> activityList;
@@ -40,6 +47,15 @@ public class ParticipantController implements UserAware {
     @FXML private Button kanbanBtn;
     @FXML private Label statusLabel;
 
+    private final ObservableList<ActivityCard> activities = FXCollections.observableArrayList();
+    private final ActivityDao activityDao = new ActivityDao();
+    private final EventDao eventDao = new EventDao();
+    private User user;
+
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
+    private static final DateTimeFormatter DATE_TIME_FMT = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
+
     /* ─ data ───────────────────────────────────────────────────────── */
     private final ObservableList<ActivityCard> activities = FXCollections.observableArrayList();
     private User user;
@@ -49,16 +65,24 @@ public class ParticipantController implements UserAware {
 
     /* ─ init ───────────────────────────────────────────────────────── */
     public void initialize() {
-        prepareTable();
         prepareActivityList();
-        loadSampleData();
+        prepareResourceTable();
 
+        activityList.setItems(activities);
+        activityList.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> showActivity(newV));
+
+        addResourceBtn.disableProperty().bind(activityList.getSelectionModel().selectedItemProperty().isNull());
         addResourceBtn.setOnAction(e -> onAddResource());
-        kanbanBtn.setOnAction(e -> showInfo("Функция Kanban появится в полной версии."));
+
+        kanbanBtn.disableProperty().bind(activityList.getSelectionModel().selectedItemProperty().isNull());
+        kanbanBtn.setOnAction(e -> openKanban());
+
+        resourceTable.setPlaceholder(new Label("Ресурсы пока не добавлены"));
+        participantList.setPlaceholder(new Label("Участники не найдены"));
+        statusLabel.setText("");
     }
 
     private void prepareActivityList() {
-        activityList.setItems(activities);
         activityList.setCellFactory(listView -> new ListCell<>() {
             @Override
             protected void updateItem(ActivityCard item, boolean empty) {
@@ -70,28 +94,28 @@ public class ParticipantController implements UserAware {
                 }
             }
         });
-
-        activityList.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) ->
-                showActivity(newV));
     }
 
-    private void prepareTable() {
-        resourceNameCol.setCellValueFactory(new PropertyValueFactory<>("name"));
-        resourceOwnerCol.setCellValueFactory(new PropertyValueFactory<>("owner"));
+    private void prepareResourceTable() {
+        resourceNameCol.setCellValueFactory(data -> data.getValue().nameProperty());
+        resourceOwnerCol.setCellValueFactory(data -> data.getValue().ownerProperty());
         resourceDateCol.setCellValueFactory(cell ->
                 Bindings.createStringBinding(() -> {
-                    LocalDate date = cell.getValue().getDate();
-                    return date == null ? "" : DATE_FMT.format(date);
-                }, cell.getValue().dateProperty()));
+                    LocalDateTime ts = cell.getValue().getUploadedAt();
+                    return ts == null ? "" : DATE_TIME_FMT.format(ts);
+                }, cell.getValue().uploadedAtProperty()));
 
         resourceActionsCol.setCellValueFactory(param -> new SimpleObjectProperty<>(param.getValue()));
         resourceActionsCol.setCellFactory(col -> new TableCell<>() {
-            private final Button downloadBtn = new Button("Скачать");
-            private final Button deleteBtn   = new Button("Удалить");
+            private final Button downloadBtn = new Button("Открыть");
+            private final Button copyLinkBtn = new Button("Скопировать ссылку");
+            private final Button deleteBtn = new Button("Удалить");
+
             {
-                downloadBtn.setOnAction(e -> onDownload(getTableRow().getItem()));
-                deleteBtn  .setOnAction(e -> onDelete  (getTableRow().getItem()));
                 downloadBtn.getStyleClass().add("button-primary");
+                downloadBtn.setOnAction(e -> onDownload(getTableRow().getItem()));
+                copyLinkBtn.setOnAction(e -> copyLink(getTableRow().getItem()));
+                deleteBtn.setOnAction(e -> onDelete(getTableRow().getItem()));
             }
 
             @Override
@@ -100,47 +124,36 @@ public class ParticipantController implements UserAware {
                 if (empty || item == null) {
                     setGraphic(null);
                 } else {
-                    setGraphic(new ToolBar(downloadBtn, deleteBtn));
+                    ToolBar bar = new ToolBar(downloadBtn, copyLinkBtn, deleteBtn);
+                    setGraphic(bar);
                 }
                 setText(null);
             }
         });
     }
 
-    private void loadSampleData() {
-        ActivityCard hackathon = new ActivityCard(
-                "Хакатон WorldSkills",
-                "Кибербезопасность",
-                LocalDateTime.of(2025, 3, 14, 9, 0),
-                LocalDateTime.of(2025, 3, 14, 11, 30));
-        hackathon.getParticipants().addAll("Иванов Иван", "Петров Пётр", "Сидорова Анна");
-        hackathon.getResources().addAll(
-                new ResourceEntry("Брифинг.pdf", "Организатор", LocalDate.of(2025, 2, 28)),
-                new ResourceEntry("Презентация.pptx", "Иванов Иван", LocalDate.of(2025, 3, 1))
-        );
+    private void reloadActivities() {
+        activities.clear();
+        participantList.setItems(FXCollections.observableArrayList());
+        resourceTable.setItems(FXCollections.observableArrayList());
 
-        ActivityCard ctf = new ActivityCard(
-                "CTF-квест",
-                "Инфозащита",
-                LocalDateTime.of(2025, 4, 5, 12, 0),
-                LocalDateTime.of(2025, 4, 5, 14, 0));
-        ctf.getParticipants().addAll("Команда «CyberFox»", "Команда «Root»");
-        ctf.getResources().add(new ResourceEntry("Правила соревнований.docx", "Модератор", LocalDate.of(2025, 3, 20)));
+        if (user == null) {
+            activityInfoLabel.setText("Авторизуйтесь для просмотра активностей");
+            return;
+        }
 
-        ActivityCard design = new ActivityCard(
-                "UI-дизайн безопасности",
-                "Дизайн",
-                LocalDateTime.of(2025, 5, 2, 10, 0),
-                LocalDateTime.of(2025, 5, 2, 12, 30));
-        design.getParticipants().addAll("Команда «SkyNet»", "Алексеева Мария");
+        List<ParticipantActivity> loaded = activityDao.findForParticipant(user.getId());
+        activities.setAll(loaded.stream().map(ActivityCard::new).collect(Collectors.toList()));
 
-        activities.setAll(hackathon, ctf, design);
-        if (!activities.isEmpty()) {
+        if (activities.isEmpty()) {
+            activityInfoLabel.setText("Активности не найдены");
+            setStatus("Нет запланированных активностей", false);
+        } else {
             activityList.getSelectionModel().selectFirst();
+            setStatus("Найдено активностей: " + activities.size(), true);
         }
     }
 
-    /* ─ actions ────────────────────────────────────────────────────── */
     private void onAddResource() {
         ActivityCard current = activityList.getSelectionModel().getSelectedItem();
         if (current == null) {
@@ -148,61 +161,88 @@ public class ParticipantController implements UserAware {
             return;
         }
 
-        TextInputDialog dialog = new TextInputDialog();
-        dialog.setTitle("Новый ресурс");
-        dialog.setHeaderText("Добавить файл для участников");
-        dialog.setContentText("Название файла:");
-        dialog.initOwner(getWindow());
-
-        Optional<String> result = dialog.showAndWait();
+        Optional<ResourceForm> result = showResourceDialog();
         if (result.isEmpty()) {
             return;
         }
 
-        String name = result.get().trim();
-        if (name.isEmpty()) {
-            showError("Название файла не может быть пустым");
+        ResourceForm form = result.get();
+        String author = user != null ? user.getFullName() : "Участник";
+        Integer userId = user != null ? user.getId() : null;
+
+        ResourceItem saved = activityDao.addResource(current.getActivityId(), form.name(), form.url(), userId, author);
+        if (saved == null) {
+            showError("Не удалось сохранить ресурс. Попробуйте позже.");
             return;
         }
 
-        String author = user != null ? user.getFullName() : "Участник";
-        ResourceEntry entry = new ResourceEntry(name, author, LocalDate.now());
+        ResourceEntry entry = ResourceEntry.from(saved);
         current.getResources().add(entry);
+        resourceTable.setItems(current.getResources());
         resourceTable.getSelectionModel().select(entry);
-        showInfo("Ресурс «" + name + "» добавлен");
+        showInfo("Ресурс «" + form.name() + "» добавлен");
     }
 
     private void onDownload(ResourceEntry entry) {
         if (entry == null) {
             return;
         }
-        showInfo("Файл «" + entry.getName() + "» отправлен на загрузку.");
+        String url = entry.getUrl();
+        if (url == null || url.isBlank()) {
+            showInfo("Для ресурса «" + entry.getName() + "» не указана ссылка.");
+            return;
+        }
+        try {
+            if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                Desktop.getDesktop().browse(URI.create(url));
+                showInfo("Ссылка открыта в браузере");
+            } else {
+                showInfo("Ссылка на ресурс: " + url);
+            }
+        } catch (Exception ex) {
+            showError("Не удалось открыть ссылку: " + ex.getMessage());
+        }
+    }
+
+    private void copyLink(ResourceEntry entry) {
+        if (entry == null || entry.getUrl() == null || entry.getUrl().isBlank()) {
+            showInfo("Ссылка отсутствует");
+            return;
+        }
+        ClipboardContent content = new ClipboardContent();
+        content.putString(entry.getUrl());
+        Clipboard.getSystemClipboard().setContent(content);
+        showInfo("Ссылка скопирована в буфер обмена");
     }
 
     private void onDelete(ResourceEntry entry) {
         if (entry == null) {
             return;
         }
-
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Удаление ресурса");
         alert.setHeaderText("Удалить «" + entry.getName() + "»?");
-        alert.setContentText("Ресурс будет недоступен другим участникам.");
+        alert.setContentText("Файл станет недоступен другим участникам.");
         alert.initOwner(getWindow());
 
-        if (alert.showAndWait().filter(ButtonType.OK::equals).isPresent()) {
+        if (alert.showAndWait().filter(ButtonType.OK::equals).isEmpty()) {
+            return;
+        }
+
+        if (activityDao.deleteResource(entry.getId())) {
             ActivityCard current = activityList.getSelectionModel().getSelectedItem();
             if (current != null) {
                 current.getResources().remove(entry);
                 showInfo("Ресурс удалён");
             }
+        } else {
+            showError("Не удалось удалить ресурс");
         }
     }
 
-    /* ─ helpers ───────────────────────────────────────────────────── */
     private void showActivity(ActivityCard activity) {
         if (activity == null) {
-            activityInfoLabel.setText("Нет выбранной активности");
+            activityInfoLabel.setText("Активность не выбрана");
             participantList.setItems(FXCollections.observableArrayList());
             resourceTable.setItems(FXCollections.observableArrayList());
             return;
@@ -221,24 +261,71 @@ public class ParticipantController implements UserAware {
         resourceTable.setItems(activity.getResources());
     }
 
+    private void openKanban() {
+        ActivityCard selected = activityList.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            return;
+        }
+        Event event = eventDao.findById(selected.getEventId());
+        if (event == null) {
+            showError("Не удалось загрузить данные мероприятия");
+            return;
+        }
+        KanbanController.open(event, null, greetingLabel.getScene());
+    }
+
+    private Optional<ResourceForm> showResourceDialog() {
+        Dialog<ResourceForm> dialog = new Dialog<>();
+        dialog.setTitle("Новый ресурс");
+        dialog.setHeaderText("Добавьте материал для участников");
+        dialog.initOwner(getWindow());
+
+        ButtonType saveBtnType = new ButtonType("Сохранить", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(saveBtnType, ButtonType.CANCEL);
+
+        TextField nameField = new TextField();
+        nameField.setPromptText("Название файла или ссылки");
+        TextField urlField = new TextField();
+        urlField.setPromptText("URL (необязательно)");
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.addRow(0, new Label("Название:"), nameField);
+        grid.addRow(1, new Label("Ссылка:"), urlField);
+        dialog.getDialogPane().setContent(grid);
+
+        Button saveBtn = (Button) dialog.getDialogPane().lookupButton(saveBtnType);
+        saveBtn.disableProperty().bind(nameField.textProperty().trim().isEmpty());
+
+        dialog.setResultConverter(button -> {
+            if (button == saveBtnType) {
+                return new ResourceForm(nameField.getText().trim(), urlField.getText().trim());
+            }
+            return null;
+        });
+
+        Platform.runLater(nameField::requestFocus);
+        return dialog.showAndWait().filter(form -> !form.name().isEmpty());
+    }
+
     private void showInfo(String message) {
-        setStatus(message, "-fx-text-fill: #008000;");
+        setStatus(message, true);
     }
 
     private void showError(String message) {
-        setStatus(message, "-fx-text-fill: #CC0000;");
+        setStatus(message, false);
     }
 
-    private void setStatus(String message, String style) {
-        statusLabel.setStyle(style);
+    private void setStatus(String message, boolean ok) {
         statusLabel.setText(message);
+        statusLabel.setStyle(ok ? "-fx-text-fill: #008000;" : "-fx-text-fill: #CC0000;");
     }
 
     private Window getWindow() {
         return greetingLabel != null ? greetingLabel.getScene().getWindow() : null;
     }
 
-    /* ─ UserAware ─────────────────────────────────────────────────── */
     @Override
     public void setUser(User user) {
         this.user = user;
@@ -247,23 +334,27 @@ public class ParticipantController implements UserAware {
         } else {
             greetingLabel.setText("Добро пожаловать!");
         }
+        reloadActivities();
     }
 
     private static String buildGreeting(User user) {
-        LocalTime now = LocalTime.now();
+        LocalDateTime now = LocalDateTime.now();
         String part;
-        if (now.isBefore(LocalTime.of(11, 1))) {
+        if (now.toLocalTime().isBefore(java.time.LocalTime.of(11, 1))) {
             part = "Доброе утро";
-        } else if (now.isBefore(LocalTime.of(18, 1))) {
+        } else if (now.toLocalTime().isBefore(java.time.LocalTime.of(18, 1))) {
             part = "Добрый день";
         } else {
             part = "Добрый вечер";
         }
-        return "%s, %s %s!".formatted(part, user.getFirstName(), user.getMiddleName());
+        return "%s, %s!".formatted(part, user.getFirstName());
     }
 
-    /* ─ model classes ─────────────────────────────────────────────── */
+    private record ResourceForm(String name, String url) { }
+
     public static class ActivityCard {
+        private final int activityId;
+        private final int eventId;
         private final String title;
         private final String eventName;
         private final LocalDateTime start;
@@ -271,14 +362,19 @@ public class ParticipantController implements UserAware {
         private final ObservableList<String> participants = FXCollections.observableArrayList();
         private final ObservableList<ResourceEntry> resources = FXCollections.observableArrayList();
 
-        public ActivityCard(String title, String eventName,
-                            LocalDateTime start, LocalDateTime end) {
-            this.title = title;
-            this.eventName = eventName;
-            this.start = Objects.requireNonNull(start);
-            this.end = Objects.requireNonNull(end);
+        public ActivityCard(ParticipantActivity activity) {
+            this.activityId = activity.getActivityId();
+            this.eventId = activity.getEventId();
+            this.title = activity.getActivityTitle();
+            this.eventName = activity.getEventTitle();
+            this.start = activity.getStart();
+            this.end = activity.getEnd();
+            this.participants.setAll(activity.getParticipants());
+            this.resources.setAll(activity.getResources().stream().map(ResourceEntry::from).collect(Collectors.toList()));
         }
 
+        public int getActivityId() { return activityId; }
+        public int getEventId() { return eventId; }
         public String getTitle() { return title; }
         public String getEventName() { return eventName; }
         public LocalDateTime getStart() { return start; }
@@ -287,30 +383,39 @@ public class ParticipantController implements UserAware {
         public ObservableList<ResourceEntry> getResources() { return resources; }
 
         public String getDisplayName() {
-            return "%s, %s–%s".formatted(
-                    title,
+            return "%s — %s %s–%s".formatted(title,
+                    DATE_FMT.format(start.toLocalDate()),
                     TIME_FMT.format(start.toLocalTime()),
-                    TIME_FMT.format(end.toLocalTime())
-            );
+                    TIME_FMT.format(end.toLocalTime()));
         }
     }
 
     public static class ResourceEntry {
-        private final StringProperty name  = new SimpleStringProperty();
+        private final int id;
+        private final String url;
+        private final StringProperty name = new SimpleStringProperty();
         private final StringProperty owner = new SimpleStringProperty();
-        private final ObjectProperty<LocalDate> date = new SimpleObjectProperty<>();
+        private final ObjectProperty<LocalDateTime> uploadedAt = new SimpleObjectProperty<>();
 
-        public ResourceEntry(String name, String owner, LocalDate date) {
+        public ResourceEntry(int id, String name, String owner, LocalDateTime uploadedAt, String url) {
+            this.id = id;
             this.name.set(name);
             this.owner.set(owner);
-            this.date.set(date);
+            this.uploadedAt.set(uploadedAt);
+            this.url = url;
         }
 
+        public static ResourceEntry from(ResourceItem item) {
+            return new ResourceEntry(item.getId(), item.getName(), item.getUploadedBy(), item.getUploadedAt(), item.getUrl());
+        }
+
+        public int getId() { return id; }
         public String getName() { return name.get(); }
         public StringProperty nameProperty() { return name; }
         public String getOwner() { return owner.get(); }
         public StringProperty ownerProperty() { return owner; }
-        public LocalDate getDate() { return date.get(); }
-        public ObjectProperty<LocalDate> dateProperty() { return date; }
+        public LocalDateTime getUploadedAt() { return uploadedAt.get(); }
+        public ObjectProperty<LocalDateTime> uploadedAtProperty() { return uploadedAt; }
+        public String getUrl() { return url; }
     }
 }
