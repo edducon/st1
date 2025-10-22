@@ -56,6 +56,14 @@ public class ParticipantController implements UserAware {
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
     private static final DateTimeFormatter DATE_TIME_FMT = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
 
+    /* ─ data ───────────────────────────────────────────────────────── */
+    private final ObservableList<ActivityCard> activities = FXCollections.observableArrayList();
+    private User user;
+
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
+
+    /* ─ init ───────────────────────────────────────────────────────── */
     public void initialize() {
         prepareActivityList();
         prepareResourceTable();

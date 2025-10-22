@@ -42,6 +42,25 @@ public class JuryController implements UserAware {
     private User user;
     private Image defaultAvatar;
 
+    /* ─ UI ─────────────────────────────────────────────────────────── */
+    @FXML private Label greetingLabel;
+    @FXML private TextField surnameField;
+    @FXML private ComboBox<String> eventBox;
+    @FXML private TableView<PersonEntry> table;
+    @FXML private TableColumn<PersonEntry, ImageView> photoCol;
+    @FXML private TableColumn<PersonEntry, String> nameCol;
+    @FXML private TableColumn<PersonEntry, String> emailCol;
+    @FXML private TableColumn<PersonEntry, String> roleCol;
+    @FXML private TableColumn<PersonEntry, String> eventCol;
+    @FXML private Label countLabel;
+    @FXML private Button registerBtn;
+
+    /* ─ data ───────────────────────────────────────────────────────── */
+    private final ObservableList<PersonEntry> master = FXCollections.observableArrayList();
+    private final FilteredList<PersonEntry> filtered = new FilteredList<>(master, p -> true);
+    private Image defaultAvatar;
+
+    /* ─ init ───────────────────────────────────────────────────────── */
     public void initialize() {
         loadDefaultAvatar();
         configureTable();

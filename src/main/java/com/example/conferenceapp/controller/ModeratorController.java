@@ -48,6 +48,55 @@ public class ModeratorController implements UserAware {
 
     private User moderator;
 
+    @FXML private Label greetingLabel;
+    @FXML private ComboBox<String> directionBox;
+    @FXML private ComboBox<Event> eventBox;
+    @FXML private TableView<ModeratorSlot> activityTable;
+    @FXML private TableColumn<ModeratorSlot, String> activityCol;
+    @FXML private TableColumn<ModeratorSlot, String> eventCol;
+    @FXML private TableColumn<ModeratorSlot, String> dateCol;
+    @FXML private TableColumn<ModeratorSlot, String> timeCol;
+    @FXML private TableColumn<ModeratorSlot, String> statusCol;
+    @FXML private Button applyBtn;
+    @FXML private Button myActivitiesBtn;
+    @FXML private Label infoLabel;
+
+    private final ObservableList<ModeratorSlot> master = FXCollections.observableArrayList();
+    private final FilteredList<ModeratorSlot> filtered = new FilteredList<>(master, s -> true);
+
+    private final ModeratorDao moderatorDao = new ModeratorDao();
+    private final EventDao eventDao = new EventDao();
+    private final ReferenceDao referenceDao = new ReferenceDao();
+    private final ActivityDao activityDao = new ActivityDao();
+
+    private final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+    private final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
+
+    private User moderator;
+
+    /* ─ UI ─────────────────────────────────────────────────────────── */
+    @FXML private Label greetingLabel;
+    @FXML private ComboBox<String> directionBox;
+    @FXML private ComboBox<String> eventBox;
+    @FXML private TableView<ActivityEntry> activityTable;
+    @FXML private TableColumn<ActivityEntry, String> activityCol;
+    @FXML private TableColumn<ActivityEntry, String> eventCol;
+    @FXML private TableColumn<ActivityEntry, String> dateCol;
+    @FXML private TableColumn<ActivityEntry, String> timeCol;
+    @FXML private TableColumn<ActivityEntry, String> statusCol;
+    @FXML private Button applyBtn;
+    @FXML private Button myActivitiesBtn;
+    @FXML private Label infoLabel;
+
+    /* ─ data ───────────────────────────────────────────────────────── */
+    private final ObservableList<ActivityEntry> master = FXCollections.observableArrayList();
+    private final FilteredList<ActivityEntry> filtered = new FilteredList<>(master, e -> true);
+    private User user;
+
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
+
+    /* ─ init ───────────────────────────────────────────────────────── */
     public void initialize() {
         activityCol.setCellValueFactory(p -> new ReadOnlyObjectWrapper<>(p.getValue().getActivityTitle()));
         eventCol.setCellValueFactory(p -> new ReadOnlyObjectWrapper<>(p.getValue().getEventTitle()));
