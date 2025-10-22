@@ -48,6 +48,29 @@ public class ModeratorController implements UserAware {
 
     private User moderator;
 
+    /* ─ UI ─────────────────────────────────────────────────────────── */
+    @FXML private Label greetingLabel;
+    @FXML private ComboBox<String> directionBox;
+    @FXML private ComboBox<String> eventBox;
+    @FXML private TableView<ActivityEntry> activityTable;
+    @FXML private TableColumn<ActivityEntry, String> activityCol;
+    @FXML private TableColumn<ActivityEntry, String> eventCol;
+    @FXML private TableColumn<ActivityEntry, String> dateCol;
+    @FXML private TableColumn<ActivityEntry, String> timeCol;
+    @FXML private TableColumn<ActivityEntry, String> statusCol;
+    @FXML private Button applyBtn;
+    @FXML private Button myActivitiesBtn;
+    @FXML private Label infoLabel;
+
+    /* ─ data ───────────────────────────────────────────────────────── */
+    private final ObservableList<ActivityEntry> master = FXCollections.observableArrayList();
+    private final FilteredList<ActivityEntry> filtered = new FilteredList<>(master, e -> true);
+    private User user;
+
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
+
+    /* ─ init ───────────────────────────────────────────────────────── */
     public void initialize() {
         activityCol.setCellValueFactory(p -> new ReadOnlyObjectWrapper<>(p.getValue().getActivityTitle()));
         eventCol.setCellValueFactory(p -> new ReadOnlyObjectWrapper<>(p.getValue().getEventTitle()));
